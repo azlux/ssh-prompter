@@ -48,11 +48,11 @@ def create_table(table, position, search):
         search = match.groups()[1]
 
     for i in table:
-        if i[2] and not folder:
+        if i[2] and not folder and not search:
             if [' ', str('d/' + i[2]) + '/', ''] not in new_table:
                 new_table.append([' ', str('d/' + i[2]) + '/', ''])
 
-        elif (search and search.lower() in i[0].lower() and folder == i[2]) or (not search and not folder) or (folder and not search and folder == i[2]):
+        elif (search and search.lower() in i[0].lower()) or (not search and not folder) or (folder and not search and folder == i[2]):
             i2 = i.copy()
             i2.insert(0, ' ')
             new_table.append(i2)
@@ -92,14 +92,10 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
 
 
 def print_output(table, position=0, search="", max_len=20, table_created=None):
-    if not table_created:
-        table_to_print = create_table(table, position, search)
-    else:
-        table_to_print = table_created
     clear()
     print("\n\t\t\tServer List\n\n\t\t********************************\n\t\t* Type to search : {}\n\t\t********************************\n".format(search))
 
-    for i in table_to_print:
+    for i in table_created:
         if i[0] is not " ":
             print("\t {}".format(i[0]), end=' ')
         else:
@@ -158,14 +154,12 @@ def main():
         max_len = (max(max_len, tp2))
     all_host = [i[0] for i in ssh_table]
     search = ""
-
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0] in all_host:
             execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', system_argv[0])
         elif len(system_argv) == 1:
             search = system_argv[0]
     else:
-        print("fallback")
         execlp('ssh', 'ssh', *system_argv)
 
     start_prompter(ssh_table, max_len, search, system_argv)
