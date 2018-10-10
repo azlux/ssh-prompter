@@ -1,6 +1,5 @@
 # ssh-prompter
-SSH prompt list about all server into you ssh_config file with search
-Additionnaly, the script can scan another ssh_config file.
+ssh-prompter lists all servers contained in your ssh_config file with search feature. Additionally, the script can scan another ssh_config file.
 
 ### Screenshot
 ![ssh-prompter](https://raw.githubusercontent.com/azlux/ssh-prompter/master/Capture1.PNG)
