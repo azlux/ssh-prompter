@@ -39,7 +39,7 @@ def ctrl_caught(signal, frame):
     exit(1)
 
 
-def create_table(table, position, search):
+def create_table_for_prompt(table, position, search):
     new_table = []
     match = re.match(r"d/(\S+)/(.*)", search)
     folder = ""
@@ -91,11 +91,11 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
         return all_ssh, max_length + 4
 
 
-def print_output(table, position=0, search="", max_len=20, table_created=None):
+def print_prompt(table, search="", max_len=20, ):
     clear()
-    print("\n\t\t\tServer List\n\n\t\t********************************\n\t\t* Type to search : {}\n\t\t********************************\n".format(search))
+    print("\n\n\t\t\tServer List\n\n\t\t********************************\n\t\t* Type to search : {}\n\t\t********************************\n".format(search))
 
-    for i in table_created:
+    for i in table:
         if i[0] is not " ":
             print("\t {}".format(i[0]), end=' ')
         else:
@@ -109,11 +109,11 @@ def print_output(table, position=0, search="", max_len=20, table_created=None):
 
 def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
     pos = 0
-    tp = create_table(ssh_table, position=pos, search=search)
-    if len(tp) == 0:
+    table = create_table_for_prompt(ssh_table, position=pos, search=search)
+    if len(table) == 0:
         execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', system_argv[0])
 
-    print_output(ssh_table, position=pos, search=search, max_len=max_len, table_created=tp)
+    print_prompt(table, search=search, max_len=max_len)
     while True:
         char = get_input()
 
@@ -122,9 +122,9 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
         elif char == 'DOWN':
             pos = pos + 1
         elif char == 'ENTER':
-            match = re.match(r"d/(\S+)/", tp[pos % len(tp)][1])
+            match = re.match(r"d/(\S+)/", table[pos % len(table)][1])
             if match:
-                search = tp[pos % len(tp)][1]
+                search = table[pos % len(table)][1]
             else:
                 break
         elif char == 'DELETE':
@@ -132,27 +132,27 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
         else:
             search += char
 
-        tp = create_table(ssh_table, position=pos, search=search)
-        print_output(ssh_table, position=pos, search=search, max_len=max_len, table_created=tp)
+        table = create_table_for_prompt(ssh_table, position=pos, search=search)
+        print_prompt(table, search=search, max_len=max_len)
 
-    if len(tp) == 0:
+    if len(table) == 0:
         exit()
 
-    execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', tp[pos % len(tp)][1])
+    execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', table[pos % len(table)][1])
 
 
 def main():
     parser = argparse.ArgumentParser(prog="Drop Menu of ~/.ssh/config file", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--add_server_file", type=argparse.FileType('r'), dest="additionnal_server", required=False,
+    parser.add_argument("--add_server_file", type=argparse.FileType('r'), dest="additional_config", required=False,
                         help="Additionnal file to search server")
     args, system_argv = parser.parse_known_args()
 
-    ssh_table, max_len = get_ssh_server()
-    if args.additionnal_server:
-        tp1, tp2 = get_ssh_server(Path(args.additionnal_server))
-        ssh_table = ssh_table + tp1
+    ssh_server, max_len = get_ssh_server()
+    if args.additional_config:
+        tp1, tp2 = get_ssh_server(Path(args.additional_config))
+        ssh_server = ssh_server + tp1
         max_len = (max(max_len, tp2))
-    all_host = [i[0] for i in ssh_table]
+    all_host = [i[0] for i in ssh_server]
     search = ""
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0] in all_host:
@@ -162,7 +162,7 @@ def main():
     else:
         execlp('ssh', 'ssh', *system_argv)
 
-    start_prompter(ssh_table, max_len, search, system_argv)
+    start_prompter(ssh_server, max_len, search, system_argv)
 
 
 if __name__ == '__main__':
