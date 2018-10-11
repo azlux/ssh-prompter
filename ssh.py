@@ -122,6 +122,8 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
         elif char == 'DOWN':
             pos = pos + 1
         elif char == 'ENTER':
+            if len(table) == 0:
+                exit()
             match = re.match(r"d/(\S+)/", table[pos % len(table)][1])
             if match:
                 search = table[pos % len(table)][1]
