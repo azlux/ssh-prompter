@@ -13,7 +13,6 @@ SSH-Prompter manager folder.
 ```
 git clone https://github.com/azlux/ssh-prompter.git
 pip3 install -r requirements.txt
-pip3 install getch
 chmod + ssh.py
 ```
 
