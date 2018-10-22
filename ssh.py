@@ -52,7 +52,7 @@ def start_ssh(parameter):
     change_name(parameter)
     if additional_config:
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no -F ' + additional_config + ' ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+               'ssh -oStrictHostKeyChecking=no -F <(cat ~/.ssh/config ' + additional_config + ') ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
                'ssh -oStrictHostKeyChecking=no ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
@@ -62,7 +62,7 @@ def create_table_for_prompt(table, position):
     new_table = []
     match = re.match(r"d/(\S+)/(.*)", search)
     folder = ""
-    search_tp = ""
+    search_tp = search
     if match:
         folder = match.groups()[0]
         search_tp = match.groups()[1]
