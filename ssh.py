@@ -1,6 +1,7 @@
 from os import system as system_call
 from os import name as system_name
 from os import execlp
+from os import popen
 from pathlib import Path
 import signal
 import getch
@@ -36,7 +37,12 @@ def get_input():
 
 def ctrl_caught(signal, frame):
     print("\nSIGINT caught, quitting")
+    _ = system_call("tmux rename-window -t${TMUX_PANE} $(hostname)")
     exit(1)
+
+
+def change_name(name):
+    _ = system_call("tmux rename-window -t${TMUX_PANE} \"" + name + "\"")
 
 
 def create_table_for_prompt(table, position, search):
@@ -111,6 +117,7 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
     pos = 0
     table = create_table_for_prompt(ssh_table, position=pos, search=search)
     if len(table) == 0:
+        change_name(system_argv[0])
         execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', system_argv[0])
 
     print_prompt(table, search=search, max_len=max_len)
@@ -139,14 +146,14 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
 
     if len(table) == 0:
         exit()
-
+    change_name(table[pos % len(table)][1])
     execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', table[pos % len(table)][1])
 
 
 def main():
     parser = argparse.ArgumentParser(prog="Drop Menu of ~/.ssh/config file", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--add_server_file", type=argparse.FileType('r'), dest="additional_config", required=False,
-                        help="Additionnal file to search server")
+    parser.add_argument("--add-config-file", type=str, dest="additional_config", required=False,
+                        help="Additionnal config file to search server")
     args, system_argv = parser.parse_known_args()
 
     ssh_server, max_len = get_ssh_server()
@@ -158,12 +165,15 @@ def main():
     search = ""
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0] in all_host:
+            change_name(system_argv[0])
             execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', system_argv[0])
         elif len(system_argv) == 1:
             search = system_argv[0]
     else:
+        change_name("ssh")
         execlp('ssh', 'ssh', *system_argv)
 
+    rows, _ = popen('stty size', 'r').read().split()
     start_prompter(ssh_server, max_len, search, system_argv)
 
 
