@@ -37,12 +37,12 @@ def get_input():
 
 def ctrl_caught(signal, frame):
     print("\nSIGINT caught, quitting")
-    _ = system_call("tmux rename-window -t${TMUX_PANE} $(hostname)")
+    _ = system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     exit(1)
 
 
 def change_name(name):
-    _ = system_call("tmux rename-window -t${TMUX_PANE} \"" + name + "\"")
+    _ = system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} \"" + name + "\";fi')
 
 
 def create_table_for_prompt(table, position, search):
@@ -118,7 +118,8 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
     table = create_table_for_prompt(ssh_table, position=pos, search=search)
     if len(table) == 0:
         change_name(system_argv[0])
-        execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', system_argv[0])
+        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
+               'ssh -oStrictHostKeyChecking=no ' + system_argv[0] + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
 
     print_prompt(table, search=search, max_len=max_len)
     while True:
@@ -147,7 +148,8 @@ def start_prompter(ssh_table, max_len=20, search="", system_argv=None):
     if len(table) == 0:
         exit()
     change_name(table[pos % len(table)][1])
-    execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', table[pos % len(table)][1])
+    execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
+           'ssh -oStrictHostKeyChecking=no ' + table[pos % len(table)][1] + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
 
 
 def main():
@@ -166,11 +168,11 @@ def main():
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0] in all_host:
             change_name(system_argv[0])
-            execlp('ssh', 'ssh', '-oStrictHostKeyChecking=no', system_argv[0])
+            execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
+                   'ssh -oStrictHostKeyChecking=no ' + system_argv[0] + ";if [ -n \"$TMUX\" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi")
         elif len(system_argv) == 1:
             search = system_argv[0]
     else:
-        change_name("ssh")
         execlp('ssh', 'ssh', *system_argv)
 
     rows, _ = popen('stty size', 'r').read().split()
