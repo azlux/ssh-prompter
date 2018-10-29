@@ -12,10 +12,6 @@ additional_config = ""
 search = ""
 
 
-def clear():
-    system_call('cls' if system_name == 'nt' else 'clear')
-
-
 def ctrl_caught(signal, frame):
     print("\nSIGINT caught, quitting")
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
