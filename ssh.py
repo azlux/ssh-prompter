@@ -107,11 +107,11 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
     box_y = 64
     box_position_y = title_position_y + 5
-    box_position_x = max(int((width - 64) / 2 - 1), 0)
+    position_x = max(int((width - 64) / 3 - 1), 0)
 
     max_row = max(height - box_position_y - 3, 5)
 
-    box = curses.newwin(max_row + 2, box_y, box_position_y, box_position_x)
+    box = curses.newwin(max_row + 2, box_y, box_position_y, position_x)
     box.keypad(1)
     box.box()
 
@@ -119,10 +119,10 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
         screen.erase()
         box.erase()
         box.border(0)
-        screen.addstr(title_position_y, box_position_x, "Server List")
-        screen.addstr(title_position_y + 1, box_position_x, "*" * 15)
-        screen.addstr(title_position_y + 2, box_position_x, "* Type to search : {}".format(search))
-        screen.addstr(title_position_y + 3, box_position_x, "*" * 15)
+        screen.addstr(title_position_y, position_x, "Server List")
+        screen.addstr(title_position_y + 1, position_x, "*" * 15)
+        screen.addstr(title_position_y + 2, position_x, "* Type to search : {}".format(search))
+        screen.addstr(title_position_y + 3, position_x, "*" * 15)
         for p, val in enumerate(table):
             if p > max_row:
                 break
