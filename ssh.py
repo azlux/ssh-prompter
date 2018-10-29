@@ -7,13 +7,14 @@ import signal
 import getch
 import argparse
 import re
+import curses
 
 additional_config = ""
 search = ""
 
 
 def clear():
-    _ = system_call('cls' if system_name == 'nt' else 'clear')
+    system_call('cls' if system_name == 'nt' else 'clear')
 
 
 def get_input():
@@ -40,12 +41,13 @@ def get_input():
 
 def ctrl_caught(signal, frame):
     print("\nSIGINT caught, quitting")
-    _ = system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+    system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+    curses.endwin()
     exit(1)
 
 
 def change_name(name):
-    _ = system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
+    system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
 
 
 def start_ssh(parameter):
@@ -58,7 +60,7 @@ def start_ssh(parameter):
                'ssh -oStrictHostKeyChecking=no ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
 
 
-def create_table_for_prompt(table, position):
+def create_table_for_prompt(table):
     new_table = []
     match = re.match(r"d/(\S+)/(.*)", search)
     folder = ""
@@ -69,16 +71,12 @@ def create_table_for_prompt(table, position):
 
     for i in table:
         if i[2] and not folder and not search_tp:
-            if [' ', str('d/' + i[2]) + '/', ''] not in new_table:
-                new_table.append([' ', str('d/' + i[2]) + '/', ''])
+            if [str('d/' + i[2]) + '/', ''] not in new_table:
+                new_table.append([str('d/' + i[2]) + '/', ''])
 
         elif (search_tp and search_tp.lower() in i[0].lower()) or (not search_tp and not folder) or (folder and not search_tp and folder == i[2]):
             i2 = i.copy()
-            i2.insert(0, ' ')
             new_table.append(i2)
-
-    if new_table:
-        new_table[position % len(new_table)][0] = "->"
     return new_table
 
 
@@ -111,56 +109,83 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
         return all_ssh, max_length + 4
 
 
-def print_prompt(table, max_len=20):
-    clear()
-    print("\n\n\t\t\tServer List\n\n\t\t********************************\n\t\t* Type to search : {}\n\t\t********************************\n".format(search))
-
-    for i in table:
-        if i[0] is not " ":
-            print("\t {}".format(i[0]), end=' ')
-        else:
-            print("\t   ", end=' ')
-        match = re.match(r"d/(\S+)/", i[1])
-        if match:
-            print("+ {}".format(match.groups()[0]))
-        else:
-            print("{}{}{}".format(i[1], " " * (max_len - len(i[1])), i[2]))
-
-
 def start_prompter(ssh_table, max_len=20, system_argv=None):
-    pos = 0
+    position = 0
     global search
-    table = create_table_for_prompt(ssh_table, position=pos)
+    table = create_table_for_prompt(ssh_table)
     if len(table) == 0:
         start_ssh(system_argv[0])
 
-    print_prompt(table, max_len=max_len)
-    while True:
-        char = get_input()
+    screen = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
+    curses.start_color()
 
-        if char == 'UP':
-            pos = pos - 1
-        elif char == 'DOWN':
-            pos = pos + 1
-        elif char == 'ENTER':
+    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+
+    curses.curs_set(0)
+
+    max_row = 20
+    box = curses.newwin(max_row + 2, 64, 15, 20)
+    box.keypad(1)
+    box.box()
+
+    while True:
+        screen.erase()
+        screen.border(0)
+        box.erase()
+        box.border(0)
+        screen.addstr(10, 20, "Server List")
+        screen.addstr(11, 20, "*" * 15)
+        screen.addstr(12, 20, "* Type to search : {}".format(search))
+        screen.addstr(13, 20, "*" * 15)
+        for p, val in enumerate(table, start=1):
+            if p> max_row:
+                break
+            if p == position:
+                color = curses.color_pair(1)
+            else:
+                color = curses.A_NORMAL
+
+            match = re.match(r"d/(\S+)/", val[0])
+
+            if match:
+                box.addstr(p, 2, "+ {}".format(match.groups()[0]), color)
+            else:
+                box.addstr(p, 2, "{}{}{}".format(val[0], " " * (max_len - len(val[0])), val[1]), color)
+
+        screen.refresh()
+        box.refresh()
+        char = box.getch()
+
+        if char == curses.KEY_UP:
+            position = (position - 1) % len(table)
+        elif char == curses.KEY_DOWN:
+            position = (position + 1) % len(table)
+        elif char == curses.KEY_ENTER or char == 10:
             if len(table) == 0:
                 exit()
-            match = re.match(r"d/(\S+)/", table[pos % len(table)][1])
+            match = re.match(r"d/(\S+)/", table[position % len(table)][0])
             if match:
-                search = table[pos % len(table)][1]
+                search = table[position % len(table)][0]
             else:
                 break
-        elif char == 'DELETE':
+        elif char == curses.KEY_DC or char == 127:
             search = search[:-1]
+        elif char == 27:
+            curses.endwin()
+            exit()
         else:
-            search += char
+            search += chr(char)
 
-        table = create_table_for_prompt(ssh_table, position=pos)
-        print_prompt(table, max_len=max_len)
+        table = create_table_for_prompt(ssh_table)
+        if len(table): position = position % len(table)
+
+    curses.endwin()
 
     if len(table) == 0:
         exit()
-    start_ssh(table[pos % len(table)][1])
+    start_ssh(table[position % len(table)][0])
 
 
 def main():
