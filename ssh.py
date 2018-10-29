@@ -4,7 +4,6 @@ from os import execlp
 from os import popen
 from pathlib import Path
 import signal
-import getch
 import argparse
 import re
 import curses
@@ -15,28 +14,6 @@ search = ""
 
 def clear():
     system_call('cls' if system_name == 'nt' else 'clear')
-
-
-def get_input():
-    char = getch.getch()
-    tp = ord(char)
-    if tp == 27:
-        getch.getch()  # skip the [
-        tp = ord(getch.getch())
-        if tp == 65:
-            return "UP"
-        elif tp == 66:
-            return 'DOWN'
-        elif tp == 67:
-            return ''  # RIGHT
-        elif tp == 68:
-            return ''  # LEFT
-    elif tp == 10:
-        return 'ENTER'
-    elif tp == 127:
-        return 'DELETE'
-    else:
-        return char
 
 
 def ctrl_caught(signal, frame):
@@ -125,22 +102,29 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
     curses.curs_set(0)
 
-    max_row = 20
-    box = curses.newwin(max_row + 2, 64, 15, 20)
+    height, width = screen.getmaxyx()
+    title_position_y = 1
+
+    box_y = 64
+    box_position_y = title_position_y + 5
+    box_position_x = max(int((width - 64) / 2 - 1), 0)
+
+    max_row = max(height - box_position_y - 3, 5)
+
+    box = curses.newwin(max_row + 2, box_y, box_position_y, box_position_x)
     box.keypad(1)
     box.box()
 
     while True:
         screen.erase()
-        screen.border(0)
         box.erase()
         box.border(0)
-        screen.addstr(10, 20, "Server List")
-        screen.addstr(11, 20, "*" * 15)
-        screen.addstr(12, 20, "* Type to search : {}".format(search))
-        screen.addstr(13, 20, "*" * 15)
-        for p, val in enumerate(table, start=1):
-            if p> max_row:
+        screen.addstr(title_position_y, box_position_x, "Server List")
+        screen.addstr(title_position_y + 1, box_position_x, "*" * 15)
+        screen.addstr(title_position_y + 2, box_position_x, "* Type to search : {}".format(search))
+        screen.addstr(title_position_y + 3, box_position_x, "*" * 15)
+        for p, val in enumerate(table):
+            if p > max_row:
                 break
             if p == position:
                 color = curses.color_pair(1)
@@ -150,9 +134,9 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
             match = re.match(r"d/(\S+)/", val[0])
 
             if match:
-                box.addstr(p, 2, "+ {}".format(match.groups()[0]), color)
+                box.addstr(p + 1, 2, "+ {}".format(match.groups()[0]), color)
             else:
-                box.addstr(p, 2, "{}{}{}".format(val[0], " " * (max_len - len(val[0])), val[1]), color)
+                box.addstr(p + 1, 2, "{}{}{}".format(val[0], " " * (max_len - len(val[0])), val[1]), color)
 
         screen.refresh()
         box.refresh()
@@ -200,7 +184,7 @@ def main():
         additional_config = args.additional_config
         tp1, tp2 = get_ssh_server(Path(args.additional_config))
         ssh_server = ssh_server + tp1
-        max_len = (max(max_len, tp2))
+        max_len = min(max(max_len, tp2), 50)
     all_host = [i[0] for i in ssh_server]
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0] in all_host:
