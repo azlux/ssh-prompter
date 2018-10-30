@@ -12,10 +12,6 @@ additional_config = ""
 search = ""
 
 
-def clear():
-    system_call('cls' if system_name == 'nt' else 'clear')
-
-
 def ctrl_caught(signal, frame):
     print("\nSIGINT caught, quitting")
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
@@ -31,7 +27,7 @@ def start_ssh(parameter):
     change_name(parameter)
     if additional_config:
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no -F <(cat ~/.ssh/config ' + additional_config + ') ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+               'ssh -oStrictHostKeyChecking=no -F <(cat ' + additional_config + ' ~/.ssh/config) ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
                'ssh -oStrictHostKeyChecking=no ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
