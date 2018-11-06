@@ -46,13 +46,15 @@ def start_ssh(host, ip=""):
     if not args.fallback or (args.fallback and is_ssh_open(host, ip)):
         if args.additional_config:
             execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-                   'ssh -oStrictHostKeyChecking=no -F <(cat ' + args.additional_config + ' ~/.ssh/config) ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+                   'ssh -oStrictHostKeyChecking=no -F <(cat ' + args.additional_config + ' ~/.ssh/config /etc/ssh/ssh_config) ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
         else:
             execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
                    'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
+        if not ip:
+            ip = host
         print("***CONNEXION EN TELNET ***\n")
-        execlp('/usr/bin/env', '/usr/bin/env', 'telnet', ip)
+        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c', 'telnet ' + ip + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
 
 
 def create_table_for_prompt(table):
@@ -83,16 +85,18 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
             host = ""
             hostname = ""
             folder = ""
+            port = 22
             for line in f:
                 line = line.strip()
-                if "host " in line.lower():
+                if "host " in line.lower() and "*" not in line.lower():
                     if host:
-                        all_ssh.append([host, hostname, folder])
+                        all_ssh.append([host, hostname, folder, port])
                         if len(host) > max_length:
                             max_length = len(host)
                         host = ""
                         hostname = ""
                         folder = ""
+                        port = 22
                 if "host " in line.lower() and len(line.split(" ")) == 2:
                     host = line.split(" ")[1]
                 elif host:
@@ -100,7 +104,9 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                         hostname = line.split(" ")[1]
                     elif "folder" in line.lower() and len(line.split(" ")) == 2:
                         folder = line.split(" ")[1]
-            all_ssh.append([host, hostname, folder])
+                    elif "port" in line.lower() and len(line.split(" ")) == 2:
+                        port = int(line.split(" ")[1])
+            all_ssh.append([host, hostname, folder, port])
         return all_ssh, max_length + 4
 
 
@@ -182,7 +188,8 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
             search += chr(char)
 
         table = create_table_for_prompt(ssh_table)
-        if len(table): position = position % len(table)
+        if len(table):
+            position = position % len(table)
 
     curses.endwin()
 
@@ -195,7 +202,7 @@ def main():
     parser = argparse.ArgumentParser(prog="Drop Menu of ~/.ssh/config file", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--add-config-file", type=str, dest="additional_config", required=False,
                         help="Additionnal config file to search server")
-    parser.add_argument("--fallback", action="store_true", dest="fallback", required=False, help="fallback in Telnet if ssh not open")
+    parser.add_argument("--fallback", action="store_true", dest="fallback", required=False, help="fallback in Telnet if ssh is not open")
     global args
     args, system_argv = parser.parse_known_args()
 
@@ -207,7 +214,7 @@ def main():
     all_host = [i[0].lower() for i in ssh_server]
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0].lower() in all_host:
-            start_ssh(system_argv[0], ssh_server[all_host.index(system_argv[0].lower())][1])
+            start_ssh(ssh_server[all_host.index(system_argv[0].lower())][0], ssh_server[all_host.index(system_argv[0].lower())][1])
         elif len(system_argv) == 1:
             global search
             search = system_argv[0]
