@@ -27,7 +27,7 @@ def start_ssh(parameter):
     change_name(parameter)
     if additional_config:
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no -F <(cat ~/.ssh/config ' + additional_config + ') ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+               'ssh -oStrictHostKeyChecking=no -F <(cat ' + additional_config + ' ~/.ssh/config) ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
                'ssh -oStrictHostKeyChecking=no ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
@@ -63,7 +63,7 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
             folder = ""
             for line in f:
                 line = line.strip()
-                if "Host " in line:
+                if "host " in line.lower():
                     if host:
                         all_ssh.append([host, hostname, folder])
                         if len(host) > max_length:
@@ -71,12 +71,12 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                         host = ""
                         hostname = ""
                         folder = ""
-                if "Host " in line and len(line.split(" ")) == 2:
+                if "host " in line.lower() and len(line.split(" ")) == 2:
                     host = line.split(" ")[1]
                 elif host:
-                    if "HostName" in line and len(line.split(" ")) == 2:
+                    if "hostname" in line.lower() and len(line.split(" ")) == 2:
                         hostname = line.split(" ")[1]
-                    elif "Folder" in line and len(line.split(" ")) == 2:
+                    elif "folder" in line.lower() and len(line.split(" ")) == 2:
                         folder = line.split(" ")[1]
             all_ssh.append([host, hostname, folder])
         return all_ssh, max_length + 4
@@ -144,6 +144,7 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
             position = (position + 1) % len(table)
         elif char == curses.KEY_ENTER or char == 10:
             if len(table) == 0:
+                curses.endwin()
                 exit()
             match = re.match(r"d/(\S+)/", table[position % len(table)][0])
             if match:
@@ -181,9 +182,9 @@ def main():
         tp1, tp2 = get_ssh_server(Path(args.additional_config))
         ssh_server = ssh_server + tp1
         max_len = min(max(max_len, tp2), 50)
-    all_host = [i[0] for i in ssh_server]
+    all_host = [i[0].lower() for i in ssh_server]
     if len(system_argv) < 2:
-        if len(system_argv) == 1 and system_argv[0] in all_host:
+        if len(system_argv) == 1 and system_argv[0].lower() in all_host:
             start_ssh(system_argv[0])
         elif len(system_argv) == 1:
             global search
