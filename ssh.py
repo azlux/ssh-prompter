@@ -7,9 +7,10 @@ import signal
 import argparse
 import re
 import curses
+import socket
 
-additional_config = ""
 search = ""
+args = None
 
 
 def ctrl_caught(signal, frame):
@@ -19,18 +20,39 @@ def ctrl_caught(signal, frame):
     exit(1)
 
 
+def is_ssh_open(host, ip):
+    if not ip:
+        ip = host
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(1)
+    try:
+        s.connect((ip, 22))
+        s.shutdown(socket.SHUT_RDWR)
+        return True
+    except (socket.gaierror, socket.herror):
+        return True
+    except (socket.timeout, ConnectionRefusedError):
+        return False
+    finally:
+        s.close()
+
+
 def change_name(name):
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
 
 
-def start_ssh(parameter):
-    change_name(parameter)
-    if additional_config:
-        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no -F <(cat ' + additional_config + ' ~/.ssh/config) ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+def start_ssh(host, ip=""):
+    change_name(host)
+    if not args.fallback or (args.fallback and is_ssh_open(host, ip)):
+        if args.additional_config:
+            execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
+                   'ssh -oStrictHostKeyChecking=no -F <(cat ' + args.additional_config + ' ~/.ssh/config) ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+        else:
+            execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
+                   'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
-        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no ' + parameter + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+        print("***CONNEXION EN TELNET ***\n")
+        execlp('/usr/bin/env', '/usr/bin/env', 'telnet', ip)
 
 
 def create_table_for_prompt(table):
@@ -166,26 +188,26 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
     if len(table) == 0:
         exit()
-    start_ssh(table[position % len(table)][0])
+    start_ssh(table[position % len(table)][0], table[position % len(table)][1])
 
 
 def main():
     parser = argparse.ArgumentParser(prog="Drop Menu of ~/.ssh/config file", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("--add-config-file", type=str, dest="additional_config", required=False,
                         help="Additionnal config file to search server")
+    parser.add_argument("--fallback", action="store_true", dest="fallback", required=False, help="fallback in Telnet if ssh not open")
+    global args
     args, system_argv = parser.parse_known_args()
 
     ssh_server, max_len = get_ssh_server()
     if args.additional_config:
-        global additional_config
-        additional_config = args.additional_config
         tp1, tp2 = get_ssh_server(Path(args.additional_config))
         ssh_server = ssh_server + tp1
         max_len = min(max(max_len, tp2), 50)
     all_host = [i[0].lower() for i in ssh_server]
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0].lower() in all_host:
-            start_ssh(system_argv[0])
+            start_ssh(system_argv[0], ssh_server[all_host.index(system_argv[0].lower())][1])
         elif len(system_argv) == 1:
             global search
             search = system_argv[0]
