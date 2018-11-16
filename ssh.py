@@ -16,7 +16,10 @@ args = None
 def ctrl_caught(signal, frame):
     print("\nSIGINT caught, quitting")
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
-    curses.endwin()
+    try:
+        curses.endwin()
+    except curses.error:
+        pass
     exit(1)
 
 
@@ -41,7 +44,7 @@ def change_name(name):
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
 
 
-def start_ssh(host, ip=""):
+def start_ssh(host, ip="", port=22):
     change_name(host)
     if not args.fallback or (args.fallback and is_ssh_open(host, ip)):
         if args.additional_config:
@@ -167,9 +170,13 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
         char = box.getch()
 
         if char == curses.KEY_UP:
-            position = (position - 1) % len(table)
-        elif char == curses.KEY_DOWN:
-            position = (position + 1) % len(table)
+            if len(table) > 0:
+                position = (position - 1) % len(table)
+        elif char == curses.KEY_DOWN and len(table) > 0:
+            if len(table) > 0:
+                position = (position + 1) % len(table)
+        elif char == curses.KEY_RIGHT or char == curses.KEY_LEFT:
+            pass
         elif char == curses.KEY_ENTER or char == 10:
             if len(table) == 0:
                 curses.endwin()
@@ -195,7 +202,7 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
     if len(table) == 0:
         exit()
-    start_ssh(table[position % len(table)][0], table[position % len(table)][1])
+    start_ssh(table[position % len(table)][0], table[position % len(table)][1], port=table[position % len(table)][3])
 
 
 def main():
@@ -214,7 +221,9 @@ def main():
     all_host = [i[0].lower() for i in ssh_server]
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0].lower() in all_host:
-            start_ssh(ssh_server[all_host.index(system_argv[0].lower())][0], ssh_server[all_host.index(system_argv[0].lower())][1])
+            start_ssh(ssh_server[all_host.index(system_argv[0].lower())][0],
+                      ssh_server[all_host.index(system_argv[0].lower())][1],
+                      port=ssh_server[all_host.index(system_argv[0].lower())][3])
         elif len(system_argv) == 1:
             global search
             search = system_argv[0]
