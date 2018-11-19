@@ -23,13 +23,13 @@ def ctrl_caught(signal, frame):
     exit(1)
 
 
-def is_ssh_open(host, ip):
+def is_ssh_open(host, ip, port):
     if not ip:
         ip = host
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(1)
     try:
-        s.connect((ip, 22))
+        s.connect((ip, port))
         s.shutdown(socket.SHUT_RDWR)
         return True
     except (socket.gaierror, socket.herror):
@@ -46,7 +46,7 @@ def change_name(name):
 
 def start_ssh(host, ip="", port=22):
     change_name(host)
-    if not args.fallback or (args.fallback and is_ssh_open(host, ip)):
+    if not args.fallback or (args.fallback and is_ssh_open(host, ip, port)):
         if args.additional_config:
             execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
                    'ssh -oStrictHostKeyChecking=no -F <(cat ' + args.additional_config + ' ~/.ssh/config /etc/ssh/ssh_config) ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
