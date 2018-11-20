@@ -47,12 +47,8 @@ def change_name(name):
 def start_ssh(host, ip="", port=22):
     change_name(host)
     if not args.fallback or (args.fallback and is_ssh_open(host, ip, port)):
-        if args.additional_config:
-            execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-                   'ssh -oStrictHostKeyChecking=no -F <(cat ' + args.additional_config + ' ~/.ssh/config /etc/ssh/ssh_config) ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
-        else:
-            execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-                   'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
+               'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
         if not ip:
             ip = host
@@ -91,6 +87,15 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
             port = 22
             for line in f:
                 line = line.strip()
+                if 'include' in line.lower() and len(line.split(" ")) == 2:
+                    path_include = line.split(" ")[1]
+                    if path_include[0] in ['/', '~']:
+                        pass
+                    else:
+                        path_include = "~/" + path_include
+                    new_ssh, new_max = get_ssh_server(path=Path(path_include))
+                    all_ssh = all_ssh + new_ssh
+                    max_length = max(new_max, max_length)
                 if "host " in line.lower() and "*" not in line.lower():
                     if host:
                         all_ssh.append([host, hostname, folder, port])
@@ -110,7 +115,7 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                     elif "port" in line.lower() and len(line.split(" ")) == 2:
                         port = int(line.split(" ")[1])
             all_ssh.append([host, hostname, folder, port])
-        return all_ssh, max_length + 4
+        return all_ssh, max_length
 
 
 def start_prompter(ssh_table, max_len=20, system_argv=None):
@@ -207,17 +212,11 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
 def main():
     parser = argparse.ArgumentParser(prog="Drop Menu of ~/.ssh/config file", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--add-config-file", type=str, dest="additional_config", required=False,
-                        help="Additionnal config file to search server")
     parser.add_argument("--fallback", action="store_true", dest="fallback", required=False, help="fallback in Telnet if ssh is not open")
     global args
     args, system_argv = parser.parse_known_args()
 
     ssh_server, max_len = get_ssh_server()
-    if args.additional_config:
-        tp1, tp2 = get_ssh_server(Path(args.additional_config))
-        ssh_server = ssh_server + tp1
-        max_len = min(max(max_len, tp2), 50)
     all_host = [i[0].lower() for i in ssh_server]
     if len(system_argv) < 2:
         if len(system_argv) == 1 and system_argv[0].lower() in all_host:
@@ -231,7 +230,7 @@ def main():
         execlp('ssh', 'ssh', *system_argv)
 
     rows, _ = popen('stty size', 'r').read().split()
-    start_prompter(ssh_server, max_len, system_argv)
+    start_prompter(ssh_server, max_len + 4, system_argv)
 
 
 if __name__ == '__main__':
