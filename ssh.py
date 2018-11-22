@@ -1,3 +1,5 @@
+#! /usr/bin/env python3.6
+
 from os import system as system_call
 from os import name as system_name
 from os import execlp
@@ -93,7 +95,7 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                         pass
                     else:
                         path_include = "~/" + path_include
-                    new_ssh, new_max = get_ssh_server(path=Path(path_include))
+                    new_ssh, new_max = get_ssh_server(path=Path(path_include).expanduser())
                     all_ssh = all_ssh + new_ssh
                     max_length = max(new_max, max_length)
                 if "host " in line.lower() and "*" not in line.lower():
@@ -129,8 +131,9 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
     curses.noecho()
     curses.cbreak()
     curses.start_color()
+    curses.use_default_colors()
 
-    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+    curses.init_pair(1, curses.COLOR_CYAN, -1)
 
     curses.curs_set(0)
 
@@ -138,10 +141,13 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
     title_position_y = 1
 
     box_y = 64
-    box_position_y = title_position_y + 5
+    box_position_y = title_position_y + 3
     position_x = max(int((width - 64) / 3 - 1), 0)
 
     max_row = max(height - box_position_y - 3, 5)
+
+    box_search = curses.newwin(3, box_y, title_position_y, position_x)
+    box_search.box()
 
     box = curses.newwin(max_row + 2, box_y, box_position_y, position_x)
     box.keypad(1)
@@ -151,15 +157,15 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
         screen.erase()
         box.erase()
         box.border(0)
-        screen.addstr(title_position_y, position_x, "Server List")
-        screen.addstr(title_position_y + 1, position_x, "*" * 15)
-        screen.addstr(title_position_y + 2, position_x, "* Type to search : {}".format(search))
-        screen.addstr(title_position_y + 3, position_x, "*" * 15)
+        box_search.erase()
+        box_search.border(0)
+        box_search.addstr(0, 3, "Server List")
+        box_search.addstr(1, 5, "Type to search : {}".format(search))
         for p, val in enumerate(table):
             if p > max_row:
                 break
             if p == position:
-                color = curses.color_pair(1)
+                color = curses.A_REVERSE
             else:
                 color = curses.A_NORMAL
 
@@ -172,6 +178,7 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
         screen.refresh()
         box.refresh()
+        box_search.refresh()
         char = box.getch()
 
         if char == curses.KEY_UP:
