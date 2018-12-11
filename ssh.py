@@ -107,7 +107,7 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                         hostname = ""
                         folder = ""
                         port = 22
-                if "host " in line.lower() and len(line.split(" ")) == 2:
+                if "host " in line.lower() and len(line.split(" ")) == 2 and "*" not in line.lower():
                     host = line.split(" ")[1]
                 elif host:
                     if "hostname" in line.lower() and len(line.split(" ")) == 2:
