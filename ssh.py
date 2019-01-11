@@ -46,9 +46,9 @@ def change_name(name):
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
 
 
-def start_ssh(host, ip="", port=22):
+def start_ssh(host, ip="", port=22, ping=True):
     change_name(host)
-    if not args.fallback or (args.fallback and is_ssh_open(host, ip, port)):
+    if not args.fallback or not ping or (args.fallback and is_ssh_open(host, ip, port)):
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
                'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
@@ -87,6 +87,7 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
             hostname = ""
             folder = ""
             port = 22
+            ping = True
             for line in f:
                 line = line.strip()
                 if 'include' in line.lower() and len(line.split(" ")) == 2:
@@ -100,13 +101,14 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                     max_length = max(new_max, max_length)
                 if "host " in line.lower() and "*" not in line.lower():
                     if host:
-                        all_ssh.append([host, hostname, folder, port])
+                        all_ssh.append([host, hostname, folder, port, ping])
                         if len(host) > max_length:
                             max_length = len(host)
                         host = ""
                         hostname = ""
                         folder = ""
                         port = 22
+                        ping = True
                 if "host " in line.lower() and len(line.split(" ")) == 2 and "*" not in line.lower():
                     host = line.split(" ")[1]
                 elif host:
@@ -116,7 +118,9 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                         folder = line.split(" ")[1]
                     elif "port" in line.lower() and len(line.split(" ")) == 2:
                         port = int(line.split(" ")[1])
-            all_ssh.append([host, hostname, folder, port])
+                    elif "proxy" in line.lower() and len(line.split(" ")) > 1:
+                        ping = False
+            all_ssh.append([host, hostname, folder, port, ping])
         return all_ssh, max_length
 
 
@@ -214,7 +218,7 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
     if len(table) == 0:
         exit()
-    start_ssh(table[position % len(table)][0], table[position % len(table)][1], port=table[position % len(table)][3])
+    start_ssh(table[position % len(table)][0], table[position % len(table)][1], port=table[position % len(table)][3], ping=table[position % len(table)][4])
 
 
 def main():
@@ -229,7 +233,8 @@ def main():
         if len(system_argv) == 1 and system_argv[0].lower() in all_host:
             start_ssh(ssh_server[all_host.index(system_argv[0].lower())][0],
                       ssh_server[all_host.index(system_argv[0].lower())][1],
-                      port=ssh_server[all_host.index(system_argv[0].lower())][3])
+                      port=ssh_server[all_host.index(system_argv[0].lower())][3],
+                      ping=ssh_server[all_host.index(system_argv[0].lower())][4])
         elif len(system_argv) == 1:
             global search
             search = system_argv[0]
