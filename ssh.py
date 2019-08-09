@@ -202,7 +202,7 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
                 search = table[position % len(table)][0]
             else:
                 break
-        elif char == curses.KEY_DC or char == 127:
+        elif char == curses.KEY_DC or char == 127 or char == curses.KEY_BACKSPACE:
             search = search[:-1]
         elif char == 27:
             curses.endwin()
@@ -223,7 +223,7 @@ def start_prompter(ssh_table, max_len=20, system_argv=None):
 
 def main():
     parser = argparse.ArgumentParser(prog="Drop Menu of ~/.ssh/config file", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--fallback", action="store_true", dest="fallback", required=False, help="fallback in Telnet if ssh is not open")
+    parser.add_argument("--fallback", action="store_true", dest="fallback", required=False, help="fallback into Telnet if ssh is not open")
     global args
     args, system_argv = parser.parse_known_args()
 
