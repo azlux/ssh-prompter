@@ -16,7 +16,7 @@ SSH-Prompter support the Import instruction if you use it into the ssh_config fi
 You need at least the version 7.3p1 of ssh.
 ```
 git clone https://github.com/azlux/ssh-prompter.git
-chmod + ssh.py
+chmod +x ssh.py
 ```
 
 put `alias ssh="~/ssh-prompter/ssh.py"` into you `.bashrc`
