@@ -46,16 +46,20 @@ def change_name(name):
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
 
 
-def start_ssh(host, ip="", port=22, ping=True):
+def start_ssh(host, ip="", port=None, ping=True):
     change_name(host)
     if not args.fallback or not ping or (args.fallback and is_ssh_open(host, ip, port)):
+        port = "" if port is None else f" -p {port} "
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+               'ssh -oStrictHostKeyChecking=no ' + host + port +
+               ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
     else:
         if not ip:
             ip = host
         print("***CONNEXION EN TELNET ***\n")
-        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c', 'telnet ' + ip + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+        port = " 23" if port is None else f" -p {port} "
+        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c', 'telnet ' + ip + port +
+               ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
 
 
 def create_table_for_prompt(table):
