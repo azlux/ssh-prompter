@@ -90,36 +90,37 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
             ping = True
             for line in f:
                 line = line.strip()
-                if 'include' in line.lower() and len(line.split(" ")) == 2:
-                    path_include = line.split(" ")[1]
-                    if path_include[0] in ['/', '~']:
-                        pass
-                    else:
-                        path_include = "~/" + path_include
-                    new_ssh, new_max = get_ssh_server(path=Path(path_include).expanduser())
-                    all_ssh = all_ssh + new_ssh
-                    max_length = max(new_max, max_length)
-                if "host " in line.lower() and "*" not in line.lower():
-                    if host:
-                        all_ssh.append([host, hostname, folder, port, ping])
-                        if len(host) > max_length:
-                            max_length = len(host)
-                        host = ""
-                        hostname = ""
-                        folder = ""
-                        port = 22
-                        ping = True
-                if "host " in line.lower() and len(line.split(" ")) == 2 and "*" not in line.lower():
-                    host = line.split(" ")[1]
-                elif host:
-                    if "hostname" in line.lower() and len(line.split(" ")) == 2:
-                        hostname = line.split(" ")[1]
-                    elif "folder" in line.lower() and len(line.split(" ")) == 2:
-                        folder = line.split(" ")[1]
-                    elif "port" in line.lower() and len(line.split(" ")) == 2:
-                        port = int(line.split(" ")[1])
-                    elif "proxy" in line.lower() and len(line.split(" ")) > 1:
-                        ping = False
+                if len(line) > 0 and line[0] != "#" :
+                    if 'include' in line.lower() and len(line.split(" ")) == 2:
+                        path_include = line.split(" ")[1]
+                        if path_include[0] in ['/', '~']:
+                            pass
+                        else:
+                            path_include = "~/" + path_include
+                        new_ssh, new_max = get_ssh_server(path=Path(path_include).expanduser())
+                        all_ssh = all_ssh + new_ssh
+                        max_length = max(new_max, max_length)
+                    if "host " in line.lower() and "*" not in line.lower():
+                        if host:
+                            all_ssh.append([host, hostname, folder, port, ping])
+                            if len(host) > max_length:
+                                max_length = len(host)
+                            host = ""
+                            hostname = ""
+                            folder = ""
+                            port = 22
+                            ping = True
+                    if "host " in line.lower() and len(line.split(" ")) == 2 and "*" not in line.lower():
+                        host = line.split(" ")[1]
+                    elif host:
+                        if "hostname" in line.lower() and len(line.split(" ")) == 2:
+                            hostname = line.split(" ")[1]
+                        elif "folder" in line.lower() and len(line.split(" ")) == 2:
+                            folder = line.split(" ")[1]
+                        elif "port" in line.lower() and len(line.split(" ")) == 2:
+                            port = int(line.split(" ")[1])
+                        elif "proxy" in line.lower() and len(line.split(" ")) > 1:
+                            ping = False
             all_ssh.append([host, hostname, folder, port, ping])
         return all_ssh, max_length
 
