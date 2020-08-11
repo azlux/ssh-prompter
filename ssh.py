@@ -43,19 +43,19 @@ def is_ssh_open(host, ip, port):
 
 
 def change_name(name):
-    system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi')
+    system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi; if [ -n "$SECURECRT" ]; then echo -n "\033]2;"' + name + '"\007";fi')
 
 
 def start_ssh(host, ip="", port=22, ping=True):
     change_name(host)
     if not args.fallback or not ping or (args.fallback and is_ssh_open(host, ip, port)):
         execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c',
-               'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+               'ssh -oStrictHostKeyChecking=no ' + host + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi; if [ -n "$SECURECRT" ]; then echo -n "\033]2;$(hostname)\007";fi')
     else:
         if not ip:
             ip = host
         print("***CONNEXION EN TELNET ***\n")
-        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c', 'telnet ' + ip + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi')
+        execlp('/usr/bin/env', '/usr/bin/env', 'bash', '-c', 'telnet ' + ip + ';if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} $(hostname);fi; if [ -n "$SECURECRT" ]; then echo -n "\033]2;$(hostname)\007";fi')
 
 
 def create_table_for_prompt(table):
