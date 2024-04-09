@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-
-from os import system as system_call
+from os import system as system_call, popen
 from os import execlp
 from pathlib import Path
 import signal
@@ -22,6 +21,7 @@ def ctrl_caught(signal, frame):
     except curses.error:
         pass
     exit(1)
+
 
 def change_name(name):
     system_call('if [ -n "$TMUX" ]; then tmux rename-window -t${TMUX_PANE} "' + name + '";fi; if [ -n "$SECURECRT" ]; then echo -n "\033]2;"' + name + '"\007";fi')
@@ -94,11 +94,13 @@ def get_ssh_server(path=Path(Path.home() / ".ssh/config")):
                             port = int(line.split(" ")[1])
             all_ssh.append([host, hostname, folder, port])
         return all_ssh
+    else:
+        exit(f"No file  found at {path}")
 
 
 def start_prompter(ssh_table, system_argv=None):
     global search
-    previous_search = ""
+    previous_search = search
     table = create_table_for_prompt(ssh_table)
     if len(table) == 0:
         start_ssh(system_argv[0])
@@ -115,35 +117,36 @@ def start_prompter(ssh_table, system_argv=None):
 
     height, width = screen.getmaxyx()
     title_position_y = 1
+    max_box_width = min(width, 80)
 
     box_position_y = title_position_y + 3
-    box_y = max(int(width / 2), 64)
-    position_x = max(int((width / 2 - box_y / 2)), 0)
+    box_x_end = width - (width - max_box_width)
+    position_x = max(min(width - box_x_end-10, 50), 0)
 
     max_lines = max(height - box_position_y - 3, 5)
-    max_len = box_y
-    box_search = curses.newwin(3, box_y, title_position_y, position_x)
+
+    box_search = curses.newwin(3, box_x_end, title_position_y, position_x)
     box_search.box()
 
-    box = curses.newwin(max_lines + 2, box_y, box_position_y, position_x)
+    box = curses.newwin(max_lines + 2, box_x_end, box_position_y, position_x)
     box.keypad(True)
     box.box()
 
     cursor_position = 0
     cursor_top = 0
     all_entries = len(table) - 1
-    page = all_entries // max_lines
 
     while True:
-        screen.erase()
+        # screen.erase()
         box.erase()
         box.border(0)
         box_search.erase()
         box_search.border(0)
         box_search.addstr(0, 3, "Server List")
         box_search.addstr(1, 5, "Type to search : {}".format(search))
-        # box_search.addstr(2, 5, f"debug: cursor_top:{cursor_top} cursor_position:{cursor_position} max:{max_lines} all:{all_entries} page:{page}")
-        scroll_nb = int((cursor_position * min(max_lines, all_entries)) / all_entries)
+        # box_search.addstr(2, 5, f"debug: cursor_top:{cursor_top} cursor_position:{cursor_position} max:{max_lines} all:{all_entries}")
+        # box_search.addstr(2, 5, f"debug: max:{max_lines} height:{height}  width:{width}")
+        scroll_nb = int((cursor_position * min(max_lines, all_entries)) / all_entries) if all_entries > 0 else 0
         for nb, val in enumerate(table[cursor_top:cursor_top + max_lines]):
             if nb >= max_lines:
                 break
@@ -156,15 +159,17 @@ def start_prompter(ssh_table, system_argv=None):
             if match_folder:
                 box.addstr(nb + 1, 2, f"+ {match_folder.groups()[0]}", color)
             else:
-                if (nb - 1 <= scroll_nb <= nb + 1) or (scroll_nb < 2 and nb < 3) or (scroll_nb > max_lines - 2 and nb > max_lines - 2):
-                    scroll = '#'
-                else:
-                    scroll = '|'
-                number_space = min(80, max_len) - len(val[0]) - len(val[1]) - 5
-                box.addnstr(nb + 1, 2, f"{val[0]}{' ' * number_space}{val[1]}", box_y - 4, color)
-                box.addnstr(nb + 1, box_y - 2, f"{scroll}", box_y - 2)
+                scroll = ' '
+                if all_entries > max_lines:
+                    if (nb - 1 <= scroll_nb <= nb + 1) or (scroll_nb < 2 and nb < 3) or (scroll_nb > max_lines - 2 and nb > max_lines - 2):
+                        scroll = '#'
+                    else:
+                        scroll = '|'
+                number_space = min(80, box_x_end) - len(val[0]) - len(val[1]) - 5
+                box.addnstr(nb + 1, 2, f"{val[0]}{' ' * number_space}{val[1]}", box_x_end - 4, color)
+                box.addnstr(nb + 1, box_x_end - 2, f"{scroll}", box_x_end - 2)
 
-        screen.refresh()
+        # screen.refresh()
         box.refresh()
         box_search.refresh()
         char = box.getch()
@@ -246,7 +251,6 @@ def main():
     else:
         execlp('ssh', 'ssh', *system_argv)
 
-    # rows, _ = popen('stty size', 'r').read().split()
     start_prompter(ssh_server, system_argv)
 
 
