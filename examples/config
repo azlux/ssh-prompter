@@ -1,0 +1,21 @@
+Host ServerA1
+    Hostname 1.2.3.4
+    Folder FolderA
+
+Host ServerA1
+    Hostname 1.2.3.5
+    Folder FolderA
+    
+Host FolderB/ServerB1
+    Hostname 1.2.3.6
+
+Host FolderB/ServerB2
+    Hostname 1.2.3.6
+
+Host NotGroupedServer1
+    Hostname 1.2.3.7
+    User whynot
+
+Host NotGroupedServer2
+    Hostname 1.2.3.8
+    User whynotv2
