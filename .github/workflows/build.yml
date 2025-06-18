@@ -13,8 +13,8 @@ jobs:
 
     strategy:
       matrix:
-        os: [linux, windows, darwin]
-        arch: [amd64, arm64]
+        os: [linux, darwin, freebsd]
+        arch: [amd64, arm64, arm]
 
     steps:
       - name: Checkout code
@@ -33,10 +33,10 @@ jobs:
           mkdir -p build
           EXT=""
           if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
-          go build -o build/ssh-selector-${GOOS}-${GOARCH}${EXT}
+          go build -o build/ssh-prompter-${GOOS}-${GOARCH}${EXT}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ssh-selector-${{ matrix.os }}-${{ matrix.arch }}
-          path: build/ssh-selector-${{ matrix.os }}-${{ matrix.arch }}*
+          name: ssh-prompter-${{ matrix.os }}-${{ matrix.arch }}
+          path: build/ssh-prompter-${{ matrix.os }}-${{ matrix.arch }}*
