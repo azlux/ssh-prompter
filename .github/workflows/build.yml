@@ -11,11 +11,6 @@ jobs:
     name: Build cross-platform Go program
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        os: [linux, darwin, freebsd]
-        arch: [amd64, arm64, arm]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,9 +21,6 @@ jobs:
           go-version: '1.24'
 
       - name: Build binary
-        env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
         run: |
           PLATFORMS=(darwin/amd64 darwin/arm64 freebsd/386 freebsd/amd64 freebsd/arm freebsd/arm64 linux/386 linux/amd64 linux/arm linux/arm64)
           mkdir -p build
