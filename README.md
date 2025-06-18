@@ -31,6 +31,14 @@ go build
 ```
 
 ## Configuration
+### Alias
+Many people don't like the long command `ssh-prompter` so I recommand to put an alias into your `~/.profile` or `~/.bashrc`.
+It's safe to replace the `ssh` command since I don't interfere with ssh if additionnals parameters are used.
+```bash
+# alias ssh="ssh-prompter"
+# or
+# alias sshp="ssh-prompter"
+```
 
 ### SSH config configuration
 Everything is here : [Official ssh_config manual](https://man.openbsd.org/ssh_config)
