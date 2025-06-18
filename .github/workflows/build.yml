@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*'  # Trigger on version tags
-  workflow_dispatch:
 
 jobs:
   build:
@@ -30,10 +29,10 @@ jobs:
             export GOARCH=$(echo $p | cut -d "/" -f 2)
             if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
             go build -o build/ssh-prompter-${GOOS}-${GOARCH}${EXT}
+            ls -alih *
           done
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
-          name: ssh-prompter-${{ matrix.os }}-${{ matrix.arch }}
-          path: build/ssh-prompter-${{ matrix.os }}-${{ matrix.arch }}*
+          files: build/ssh-prompter-*
