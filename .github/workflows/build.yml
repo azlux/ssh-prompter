@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}-${{ matrix.arch }}
+    name: Build cross-platform Go program
     runs-on: ubuntu-latest
 
     strategy:
@@ -23,17 +23,22 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
 
       - name: Build binary
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
         run: |
+          PLATFORMS=(darwin/amd64 darwin/arm64 freebsd/386 freebsd/amd64 freebsd/arm freebsd/arm64 linux/386 linux/amd64 linux/arm linux/arm64)
           mkdir -p build
           EXT=""
-          if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
-          go build -o build/ssh-prompter-${GOOS}-${GOARCH}${EXT}
+          for p in "${PLATFORMS[@]}"; do
+            export GOOS=$(echo $p | cut -d "/" -f 1)
+            export GOARCH=$(echo $p | cut -d "/" -f 2)
+            if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
+            go build -o build/ssh-prompter-${GOOS}-${GOARCH}${EXT}
+          done
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
