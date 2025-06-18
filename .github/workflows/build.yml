@@ -36,7 +36,7 @@ jobs:
           go build -o build/ssh-prompter-${GOOS}-${GOARCH}${EXT}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ssh-prompter-${{ matrix.os }}-${{ matrix.arch }}
           path: build/ssh-prompter-${{ matrix.os }}-${{ matrix.arch }}*
