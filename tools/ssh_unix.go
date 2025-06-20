@@ -47,7 +47,7 @@ func LaunchSSH(selected_host string, logger *slog.Logger) {
 
 	if haveTMUX {
 
-		args = []string{"bash", "-c", "trap 'tmux set-window-option automatic-rename on' EXIT; ssh " + selected_host}
+		args = []string{"bash", "-c", "trap 'tmux set-window-option automatic-rename on' EXIT SIGHUP SIGTERM; ssh -oStrictHostKeyChecking=accept-new " + selected_host}
 		binary, err := exec.LookPath("bash")
 		if err != nil {
 			logger.Error("Error searching 'bash'", "err", err)
@@ -55,7 +55,7 @@ func LaunchSSH(selected_host string, logger *slog.Logger) {
 		}
 		binaryToRun = binary
 	} else {
-		args = []string{"ssh", selected_host}
+		args = []string{"ssh -oStrictHostKeyChecking=accept-new", selected_host}
 		binary, err := exec.LookPath("ssh")
 		if err != nil {
 			logger.Error("Error searching 'ssh'", "err", err)

@@ -68,7 +68,8 @@ func main() {
 	var searchResultHost tui.HostItem
 	if len(args) == 1 {
 		searchText = args[0]
-	} else if len(args) > 1 || hasUnknown {
+	}
+	if len(args) > 1 || hasUnknown {
 		tools.LaunchSSHArgs(os.Args[1:], logger)
 	}
 
