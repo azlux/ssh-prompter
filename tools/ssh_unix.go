@@ -7,19 +7,25 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
 
-func changeTMUXName(name string, logger *slog.Logger) bool {
+func changeTMUXName(name string, logger *slog.Logger) int {
 	// Manage TMUX
 	_, haveTmux := os.LookupEnv("TMUX")
 	if haveTmux {
 		logger.Debug("TMUX detected, trigger the rename")
 		exec.Command("tmux", "rename-window", name).Run()
-		return true
+		res, _ := exec.Command("tmux", "display-message", "-p", "-F", "#{window_index}").Output()
+		res_string := strings.TrimSpace(string(res))
+		res_int, _ := strconv.Atoi(res_string)
+		logger.Debug("TMUX windows n°" + res_string + " found")
+		return res_int
 	}
-	return false
+	return -1
 }
 
 func LaunchSSHArgs(args []string, logger *slog.Logger) {
@@ -39,15 +45,15 @@ func LaunchSSHArgs(args []string, logger *slog.Logger) {
 }
 func LaunchSSH(selected_host string, logger *slog.Logger) {
 
-	haveTMUX := changeTMUXName(selected_host, logger)
+	TMUXWindow := changeTMUXName(selected_host, logger)
 
 	// args to pass to the ssh executable bin
 	var args = make([]string, 0)
 	var binaryToRun string
 
-	if haveTMUX {
+	if TMUXWindow >= 0 {
 
-		args = []string{"bash", "-c", "trap 'tmux set-window-option automatic-rename on' EXIT SIGHUP SIGTERM; ssh -oStrictHostKeyChecking=accept-new " + selected_host}
+		args = []string{"bash", "-c", "trap 'tmux set-option -w -t " + strconv.Itoa(TMUXWindow) + " automatic-rename on' EXIT SIGHUP SIGTERM; ssh -oStrictHostKeyChecking=accept-new " + selected_host}
 		binary, err := exec.LookPath("bash")
 		if err != nil {
 			logger.Error("Error searching 'bash'", "err", err)
@@ -55,7 +61,7 @@ func LaunchSSH(selected_host string, logger *slog.Logger) {
 		}
 		binaryToRun = binary
 	} else {
-		args = []string{"ssh -oStrictHostKeyChecking=accept-new", selected_host}
+		args = []string{"ssh", "-oStrictHostKeyChecking=accept-new", selected_host}
 		binary, err := exec.LookPath("ssh")
 		if err != nil {
 			logger.Error("Error searching 'ssh'", "err", err)
@@ -63,6 +69,8 @@ func LaunchSSH(selected_host string, logger *slog.Logger) {
 		}
 		binaryToRun = binary
 	}
+
+	logger.Debug("Command to run: " + strings.Join(args, " "))
 
 	env := os.Environ()
 	err := unix.Exec(binaryToRun, args, env)
