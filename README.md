@@ -1,5 +1,7 @@
 # ssh-prompter
 
+The source of this project is https://git.azlux.fr/azlux/ssh-prompter, **PR are accepted on the source only**.
+
 ssh-prompter lists all servers contained in your ssh_config file with search feature.
 
 Additionally, the script can scan others `Include` [ssh_config file if used](https://man.openbsd.org/ssh_config#Include).
