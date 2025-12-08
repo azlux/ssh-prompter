@@ -3,7 +3,7 @@ name: Build Go Binaries
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags
+      - "v*" # Trigger on version tags
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: 'stable'
+          go-version: "stable"
 
       - name: Build binary
         run: |
@@ -32,7 +32,12 @@ jobs:
             ls -alih *
           done
 
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+      - name: Publish Forgejo Release
+        uses: actions/forgejo-release@v2.7.3
         with:
-          files: build/ssh-prompter-*
+          direction: upload
+          url: https://git.azlux.fr
+          repo: azlux/ssh-prompter
+          title: "ssh-prompter ${{ github.ref_name }}"
+          release-dir: "build" # All files of this folder are added to the release file
+          release-notes: "Automated release for ${{ github.ref_name }}"

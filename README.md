@@ -32,7 +32,7 @@ You need to install the [Go Language](https://go.dev/doc/install)
 
 Then you can build the project
 ```bash
-git clone https://github.com/azlux/ssh-prompter.git
+git clone https://git.azlux.fr/azlux/ssh-prompter.git
 cd ssh-prompter
 go build
 ```
