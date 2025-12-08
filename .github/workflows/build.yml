@@ -27,16 +27,17 @@ jobs:
           for p in "${PLATFORMS[@]}"; do
             export GOOS=$(echo $p | cut -d "/" -f 1)
             export GOARCH=$(echo $p | cut -d "/" -f 2)
+            echo "Building for ${GOOS}/${GOARCH}"
             if [ "${GOOS}" = "windows" ]; then EXT=".exe"; fi
             go build -o build/ssh-prompter-${GOOS}-${GOARCH}${EXT}
-            ls -alih *
           done
+          ls -alih build/
 
       - name: Publish Forgejo Release
         uses: actions/forgejo-release@v2.7.3
         with:
           direction: upload
-          url: https://git.azlux.fr
+          url: http://forgejo:3000
           repo: azlux/ssh-prompter
           title: "ssh-prompter ${{ github.ref_name }}"
           release-dir: "build" # All files of this folder are added to the release file
