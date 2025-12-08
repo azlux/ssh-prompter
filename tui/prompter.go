@@ -1,3 +1,4 @@
+// Package tui implement the terminal TUI with tcell and tview
 package tui
 
 import (
@@ -35,7 +36,7 @@ func ParseSSHConfig(path string, logger *slog.Logger) ([]HostItem, bool) {
 
 	allHost := make([]HostItem, 0)
 	var tpHost, tpHostname, tpFolder string
-	var tpFolderInName bool = false
+	var tpFolderInName = false
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -51,17 +52,35 @@ func ParseSSHConfig(path string, logger *slog.Logger) ([]HostItem, bool) {
 		}
 		// loop if include found into config
 		if strings.ToLower(lineFields[0]) == "include" {
-			pathInclude := lineFields[1]
-			if !(strings.HasPrefix(pathInclude, "/") || strings.HasPrefix(pathInclude, "~")) {
-				home, _ := os.UserHomeDir()
-				pathInclude = filepath.Join(home, ".ssh", pathInclude)
-			} else if strings.HasPrefix(pathInclude, "~") {
-				home, _ := os.UserHomeDir()
-				pathInclude = strings.Replace(pathInclude, "~", home, 1)
+			pathsToInclude := lineFields[1:]
+
+			for _, onePath := range pathsToInclude {
+				if !strings.HasPrefix(onePath, "/") && !strings.HasPrefix(onePath, "~") {
+					home, _ := os.UserHomeDir()
+					onePath = filepath.Join(home, ".ssh", onePath)
+				} else if strings.HasPrefix(onePath, "~") {
+					home, _ := os.UserHomeDir()
+					onePath = strings.Replace(onePath, "~", home, 1)
+				}
+				if strings.HasSuffix(onePath, "*") {
+					matches, err := filepath.Glob(onePath)
+
+					if err != nil {
+						logger.Warn("Erreur glob", "pattern", onePath, "error", err)
+						continue
+					}
+
+					for _, match := range matches {
+						logger.Debug("Including file from dir", "file", match)
+						newHosts, _ := ParseSSHConfig(match, logger) // récursion
+						allHost = append(allHost, newHosts...)
+					}
+				} else {
+					logger.Debug("Including file", "file", onePath)
+					newhosts, _ := ParseSSHConfig(onePath, logger)
+					allHost = append(allHost, newhosts...)
+				}
 			}
-			logger.Debug("Including" + pathInclude)
-			newhosts, _ := ParseSSHConfig(pathInclude, logger)
-			allHost = append(allHost, newhosts...)
 		} else if strings.ToLower(lineFields[0]) == "host" && !strings.Contains(lineFields[1], "*") {
 			if tpHost != "" { // If exist, I already found the full config of previous one
 				allHost = append(allHost, HostItem{Host: tpHost, Hostname: tpHostname, Folder: tpFolder, FolderInName: tpFolderInName})
@@ -110,7 +129,7 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 		list.Clear()
 		count := 0
 		_, _, widthList, _ = list.GetInnerRect()
-		all_dir := make([]string, 0)
+		allFolders := make([]string, 0)
 
 		for i := range allItems {
 			hostToPrint := ""
@@ -122,13 +141,13 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 			if filter == "" { // No Search requested
 				if allItems[i].Folder != "" { //Manage a list of folder
 					alreadyExist := false
-					for j := range all_dir {
-						if all_dir[j] == allItems[i].Folder {
+					for j := range allFolders {
+						if allFolders[j] == allItems[i].Folder {
 							alreadyExist = true
 						}
 					}
 					if !alreadyExist { // List of uniq folder
-						all_dir = append(all_dir, allItems[i].Folder)
+						allFolders = append(allFolders, allItems[i].Folder)
 					}
 				} else {
 					count++
@@ -145,9 +164,9 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 				}
 			}
 		}
-		for i := len(all_dir) - 1; i >= 0; i-- { // Loop to print all folder on top
+		for i := len(allFolders) - 1; i >= 0; i-- { // Loop to print all folder on top
 			count++
-			list.InsertItem(0, fmt.Sprintf("%s%s", prefixFolder, all_dir[i]), "", 0, nil)
+			list.InsertItem(0, fmt.Sprintf("%s%s", prefixFolder, allFolders[i]), "", 0, nil)
 		}
 		statusBar.SetText(fmt.Sprintf("[gray]%d entries, quit: CTRL+C", count))
 	}
@@ -169,8 +188,8 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 		height-- // last line doesn't count
 
 		pos := int(float64(index) / float64(total) * float64(height))
-		padding_top := 2
-		bar := strings.Repeat("\n", padding_top)
+		paddingTop := 2
+		bar := strings.Repeat("\n", paddingTop)
 		for i := 0; i <= height; i++ {
 			if i == pos {
 				bar += "[green]█\n"
