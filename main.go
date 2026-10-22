@@ -28,10 +28,9 @@ func LaunchSSHItemHost(hostItem tui.HostItem) {
 }
 
 func main() {
-	var addr_debug *bool = flag.Bool("debug-prompter", false, "Some debug log for ssh-prompter")
-	flag.CommandLine.ParseErrorsWhitelist.UnknownFlags = true
+	var addr_debug *bool = flag.Bool("prompter-debug", false, "Some debug log for ssh-prompter")
+	flag.CommandLine.ParseErrorsAllowlist.UnknownFlags = true
 	flag.Parse()
-	args := flag.Args()
 
 	// Log
 	if *addr_debug {
@@ -50,16 +49,31 @@ func main() {
 		knownFlags["--"+f.Name] = true
 	})
 
+	sshArgs := make([]string, 0, len(os.Args)-1)
+	hasUnknown := false
+
 	// Parse all args starting with -
 	// Compare with knowFlags
-	hasUnknown := false
 	for _, arg := range os.Args[1:] {
-		if strings.HasPrefix(arg, "-") {
-			flagName := arg
-			if !knownFlags[flagName] {
-				hasUnknown = true
-			}
+		if !strings.HasPrefix(arg, "--") { // don't need to check simple dash
+			sshArgs = append(sshArgs, arg)
+			continue
 		}
+
+		flagName := arg
+		if index := strings.IndexByte(flagName, '='); index >= 0 {
+			flagName = flagName[:index] // for --args=data
+		}
+		if knownFlags[flagName] { // ssh-prompter known flags
+			continue
+		}
+		hasUnknown = true
+		sshArgs = append(sshArgs, arg)
+	}
+
+	args := flag.Args()
+	if len(args) > 1 || hasUnknown {
+		tools.LaunchSSHArgs(sshArgs, logger)
 	}
 
 	var searchText string = ""
@@ -68,9 +82,6 @@ func main() {
 	var searchResultHost tui.HostItem
 	if len(args) == 1 {
 		searchText = args[0]
-	}
-	if len(args) > 1 || hasUnknown {
-		tools.LaunchSSHArgs(os.Args[1:], logger)
 	}
 
 	// Starting here
