@@ -16,7 +16,8 @@ import (
 var logger *slog.Logger
 
 func initLog(level slog.Level) {
-	logger = slog.New(console.NewHandler(os.Stderr, &console.HandlerOptions{Level: level}))
+	var addSource bool = (level == slog.LevelDebug)
+	logger = slog.New(console.NewHandler(os.Stderr, &console.HandlerOptions{Level: level, AddSource: addSource}))
 }
 
 func LaunchSSHItemHost(hostItem tui.HostItem) {
