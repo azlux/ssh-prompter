@@ -45,9 +45,9 @@ func main() {
 	// This action will bypass the prompter
 
 	// Build a set of known flags
-	knownFlags := make(map[string]bool)
+	knownFlags := make(map[string]*flag.Flag)
 	flag.CommandLine.VisitAll(func(f *flag.Flag) {
-		knownFlags["--"+f.Name] = true
+		knownFlags["--"+f.Name] = f
 	})
 
 	sshArgs := make([]string, 0, len(os.Args)-1)
@@ -55,7 +55,9 @@ func main() {
 
 	// Parse all args starting with -
 	// Compare with knowFlags
-	for _, arg := range os.Args[1:] {
+	for i := 1; i < len(os.Args); i++ {
+		arg := os.Args[i]
+
 		if !strings.HasPrefix(arg, "--") { // don't need to check simple dash
 			sshArgs = append(sshArgs, arg)
 			continue
@@ -65,9 +67,20 @@ func main() {
 		if index := strings.IndexByte(flagName, '='); index >= 0 {
 			flagName = flagName[:index] // for --args=data
 		}
-		if knownFlags[flagName] { // ssh-prompter known flags
+
+		if f, ok := knownFlags[flagName]; ok { // ssh-prompter known flags
+			// for --flag=value
+			if strings.Contains(arg, "=") {
+				continue
+			}
+			// for --flag value, skip the next params because it's the value
+			if f.Value.Type() != "bool" && i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
+				i++
+			}
 			continue
 		}
+
+		// If here, there are args for the real ssh command
 		hasUnknown = true
 		sshArgs = append(sshArgs, arg)
 	}
