@@ -30,7 +30,7 @@ func LaunchSSHItemHost(hostItem tui.HostItem) {
 
 func main() {
 	var addr_debug *bool = flag.Bool("prompter-debug", false, "Some debug log for ssh-prompter")
-	flag.CommandLine.ParseErrorsAllowlist.UnknownFlags = true
+	flag.CommandLine.ParseErrorsAllowlist.UnknownFlagsHandling = flag.PassUnknownFlagToArgs
 	flag.Parse()
 
 	// Log
@@ -43,51 +43,10 @@ func main() {
 
 	// Part to check if use of specific ssh args
 	// This action will bypass the prompter
-
-	// Build a set of known flags
-	knownFlags := make(map[string]*flag.Flag)
-	flag.CommandLine.VisitAll(func(f *flag.Flag) {
-		knownFlags["--"+f.Name] = f
-	})
-
-	sshArgs := make([]string, 0, len(os.Args)-1)
-	hasUnknown := false
-
-	// Parse all args starting with -
-	// Compare with knowFlags
-	for i := 1; i < len(os.Args); i++ {
-		arg := os.Args[i]
-
-		if !strings.HasPrefix(arg, "--") { // don't need to check simple dash
-			sshArgs = append(sshArgs, arg)
-			continue
-		}
-
-		flagName := arg
-		if index := strings.IndexByte(flagName, '='); index >= 0 {
-			flagName = flagName[:index] // for --args=data
-		}
-
-		if f, ok := knownFlags[flagName]; ok { // ssh-prompter known flags
-			// for --flag=value
-			if strings.Contains(arg, "=") {
-				continue
-			}
-			// for --flag value, skip the next params because it's the value
-			if f.Value.Type() != "bool" && i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
-				i++
-			}
-			continue
-		}
-
-		// If here, there are args for the real ssh command
-		hasUnknown = true
-		sshArgs = append(sshArgs, arg)
-	}
-
 	args := flag.Args()
-	if len(args) > 1 || hasUnknown {
-		tools.LaunchSSHArgs(sshArgs, logger)
+	if len(args) > 0 {
+        logger.Debug("Args ssh specific: " + args)
+	    tools.LaunchSSHArgs(args, logger)
 	}
 
 	var searchText string = ""
@@ -98,7 +57,7 @@ func main() {
 		searchText = args[0]
 	}
 
-	// Starting here
+	// Starting TUI part here
 	path, _ := os.UserHomeDir()
 	allItems, ok := tui.ParseSSHConfig(filepath.Join(path, "/.ssh/config"), logger)
 	if !ok {
