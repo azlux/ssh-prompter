@@ -6,7 +6,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/phsym/console-slog v0.3.1
 	github.com/rivo/tview v0.42.0
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.0.11-0.20261029222656-f8a990678a6d
 	golang.org/x/sys v0.49.0
 )
 
