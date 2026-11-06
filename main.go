@@ -45,8 +45,8 @@ func main() {
 	// This action will bypass the prompter
 	args := flag.Args()
 	if len(args) > 0 {
-        logger.Debug("Args ssh specific: " + args)
-	    tools.LaunchSSHArgs(args, logger)
+		logger.Debug("Args ssh specific", "args", args)
+		tools.LaunchSSHArgs(args, logger)
 	}
 
 	var searchText string = ""
