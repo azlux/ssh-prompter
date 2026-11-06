@@ -55,30 +55,42 @@ func ParseSSHConfig(path string, logger *slog.Logger) ([]HostItem, bool) {
 			pathsToInclude := lineFields[1:]
 
 			for _, onePath := range pathsToInclude {
-				if !strings.HasPrefix(onePath, "/") && !strings.HasPrefix(onePath, "~") {
-					home, _ := os.UserHomeDir()
-					onePath = filepath.Join(home, ".ssh", onePath)
-				} else if strings.HasPrefix(onePath, "~") {
-					home, _ := os.UserHomeDir()
+				if strings.HasPrefix(onePath, "~") {
+					home, err := os.UserHomeDir()
+					if err != nil {
+						logger.Warn("Could not determine home directory", "error", err)
+						continue
+					}
 					onePath = strings.Replace(onePath, "~", home, 1)
+				} else if !strings.HasPrefix(onePath, "/") {
+					home, err := os.UserHomeDir()
+					if err != nil {
+						logger.Warn("Could not determine home directory", "error", err)
+						continue
+					}
+					onePath = filepath.Join(home, ".ssh", onePath)
 				}
 				if strings.HasSuffix(onePath, "*") {
 					matches, err := filepath.Glob(onePath)
 
 					if err != nil {
-						logger.Warn("Erreur glob", "pattern", onePath, "error", err)
+						logger.Warn("Glob pattern error", "pattern", onePath, "error", err)
 						continue
 					}
 
 					for _, match := range matches {
 						logger.Debug("Including file from dir", "file", match)
-						newHosts, _ := ParseSSHConfig(match, logger) // récursion
-						allHost = append(allHost, newHosts...)
+						newHosts, ok := ParseSSHConfig(match, logger)
+						if ok {
+							allHost = append(allHost, newHosts...)
+						}
 					}
 				} else {
 					logger.Debug("Including file", "file", onePath)
-					newhosts, _ := ParseSSHConfig(onePath, logger)
-					allHost = append(allHost, newhosts...)
+					newhosts, ok := ParseSSHConfig(onePath, logger)
+					if ok {
+						allHost = append(allHost, newhosts...)
+					}
 				}
 			}
 		} else if strings.ToLower(lineFields[0]) == "host" && !strings.Contains(lineFields[1], "*") {
@@ -109,6 +121,10 @@ func ParseSSHConfig(path string, logger *slog.Logger) ([]HostItem, bool) {
 		allHost = append(allHost, HostItem{Host: tpHost, Hostname: tpHostname, Folder: tpFolder, FolderInName: tpFolderInName})
 	}
 
+	if err := scanner.Err(); err != nil {
+		logger.Warn("Error reading SSH config file", "path", path, "error", err)
+	}
+
 	return allHost, true
 }
 
@@ -130,6 +146,7 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 		count := 0
 		_, _, widthList, _ = list.GetInnerRect()
 		allFolders := make([]string, 0)
+		seenFolders := make(map[string]bool)
 
 		for i := range allItems {
 			hostToPrint := ""
@@ -140,13 +157,8 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 			}
 			if filter == "" { // No Search requested
 				if allItems[i].Folder != "" { //Manage a list of folder
-					alreadyExist := false
-					for j := range allFolders {
-						if allFolders[j] == allItems[i].Folder {
-							alreadyExist = true
-						}
-					}
-					if !alreadyExist { // List of uniq folder
+					if !seenFolders[allItems[i].Folder] { // List of uniq folder
+						seenFolders[allItems[i].Folder] = true
 						allFolders = append(allFolders, allItems[i].Folder)
 					}
 				} else {
@@ -222,6 +234,7 @@ func StartPrompter(search string, allItems []HostItem) (HostItem, bool) {
 			updateScrollBar()
 		} else {
 			app.Stop()
+			return
 		}
 	})
 

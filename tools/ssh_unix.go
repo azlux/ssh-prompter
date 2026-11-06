@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package tools
 
@@ -22,7 +21,7 @@ func changeTMUXName(name string, logger *slog.Logger) int {
 		res, _ := exec.Command("tmux", "display-message", "-p", "-F", "#{window_index}").Output()
 		res_string := strings.TrimSpace(string(res))
 		res_int, _ := strconv.Atoi(res_string)
-		logger.Debug("TMUX windows n°" + res_string + " found")
+		logger.Debug("TMUX window index " + res_string + " found")
 		return res_int
 	}
 	return -1
@@ -75,7 +74,7 @@ func LaunchSSH(selected_host string, logger *slog.Logger) {
 	env := os.Environ()
 	err := unix.Exec(binaryToRun, args, env)
 	if err != nil {
-		logger.Error("Erreur lors de l'exécution de 'ssh'", "err", err)
+		logger.Error("Error executing ssh command", "err", err)
 		os.Exit(0)
 	}
 }
