@@ -33,12 +33,12 @@ jobs:
           done
           ls -alih build/
 
-      - name: Publish Forgejo Release
-        uses: actions/forgejo-release@v2.7.3
+      - name: Add binaries to existing release
+        uses: actions/forgejo-release@v2
         with:
           direction: upload
           url: http://forgejo:3000
           repo: azlux/ssh-prompter
-          title: "ssh-prompter ${{ github.ref_name }}"
+          tag: ${{ forge.ref_name }}
           release-dir: "build" # All files of this folder are added to the release file
-          release-notes: "Automated release for ${{ github.ref_name }}"
+          override: true
