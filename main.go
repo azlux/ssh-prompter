@@ -42,10 +42,17 @@ func main() {
 	}
 
 	// Part to check if use of specific ssh args
-	// This action will bypass the prompter
+	// This action will bypass the prompter only if args look like SSH flags (start with -)
 	args := flag.Args()
-	if len(args) > 0 {
-		logger.Debug("Args ssh specific", "args", args)
+	hasSSHFlags := false
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			hasSSHFlags = true
+			break
+		}
+	}
+	if hasSSHFlags && len(args) > 0 {
+		logger.Debug("SSH flags detected, bypassing TUI", "args", args)
 		tools.LaunchSSHArgs(args, logger)
 	}
 
